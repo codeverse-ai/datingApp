@@ -1,0 +1,10 @@
+{
+  "name": "React Spark - Dating App",
+  "description": "A modern, sleek dating application interface built with React and Tailwind CSS, featuring interactive swipe gestures for a dynamic user experience.",
+  "requestFramePermissions": [
+    "geolocation",
+    "camera",
+    "microphone"
+  ],
+  "prompt": ""
+}
