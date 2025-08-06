@@ -26,7 +26,7 @@ const MatchesPage: React.FC = () => {
         return (
             <LinearGradient colors={['#FFF1F2', '#F0F9FF']} style={styles.emptyContainer}>
                 <SafeAreaView style={styles.safeArea}>
-                    <Text style={styles.headerTitle}>Matches</Text>
+                    <Text style={styles.headerTitle}>Spark</Text>
                     <View style={styles.centered}>
                         <HeartIcon width={100} height={100} color="#e5e7eb" />
                         <Text style={styles.emptyTitle}>No Matches Yet</Text>

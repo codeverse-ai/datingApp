@@ -6,7 +6,7 @@ const FILTER_STORAGE_KEY = 'spark_filters_mobile';
 
 const DEFAULT_FILTERS: FilterState = {
   ageRange: [18, 55],
-  distance: 50, // in miles
+  distance: 5000, // in miles
   requiredInterests: [],
   mustHaveBio: false,
   searchLocation: null,

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, SafeAreaView, KeyboardAvoidingView, Platform, ActivityIndicator, Image } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
@@ -7,8 +6,9 @@ import type { ChatMessage, Profile } from '../types';
 import { getAiIcebreaker, getAiDateIdea } from '../utils/ai';
 import { MOCK_PROFILES } from '../constants';
 import { WandIcon } from '../components/icons/WandIcon';
-import { ChatHeader } from '../components/ChatHeader';
+import { XIcon } from '../components/icons/XIcon';
 import { LinearGradient } from 'expo-linear-gradient';
+import { ProfileDetailModal } from '../components/ProfileDetailModal';
 
 const ChatPage: React.FC = () => {
   const route = useRoute<any>();
@@ -20,6 +20,7 @@ const ChatPage: React.FC = () => {
   const [newMessage, setNewMessage] = useState('');
   const [aiSuggestion, setAiSuggestion] = useState<string | null>(null);
   const [isLoadingAi, setIsLoadingAi] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
   const flatListRef = useRef<FlatList>(null);
 
   const messages: ChatMessage[] = user?.chats?.[matchId] || [];
@@ -27,13 +28,8 @@ const ChatPage: React.FC = () => {
 
   useEffect(() => {
     const profile = MOCK_PROFILES.find(p => p.id === matchId);
-    if (profile) {
-      setMatchProfile(profile);
-      navigation.setOptions({
-        header: () => <ChatHeader profile={profile} />,
-      });
-    }
-  }, [matchId, navigation]);
+    if (profile) setMatchProfile(profile);
+  }, [matchId]);
 
   const handleSendMessage = async () => {
     if (!newMessage.trim() || !user) return;
@@ -41,7 +37,7 @@ const ChatPage: React.FC = () => {
     setNewMessage('');
     setAiSuggestion(null);
   };
-  
+
   const handleGetAiSuggestion = async () => {
     if (!user || !matchProfile || isLoadingAi) return;
     setIsLoadingAi(true);
@@ -52,13 +48,12 @@ const ChatPage: React.FC = () => {
         : await getAiDateIdea(user, matchProfile);
       setAiSuggestion(suggestion);
     } catch (error) {
-      console.error("AI suggestion failed:", error);
       setAiSuggestion("Sorry, I couldn't think of anything right now.");
     } finally {
       setIsLoadingAi(false);
     }
   };
-  
+
   const useSuggestion = () => {
     if (aiSuggestion) {
       setNewMessage(aiSuggestion);
@@ -69,11 +64,20 @@ const ChatPage: React.FC = () => {
   const renderMessage = ({ item }: { item: ChatMessage }) => {
     const isMyMessage = item.senderId === user?.id;
     return (
-      <View style={[styles.messageRow, isMyMessage ? styles.myMessageRow : styles.theirMessageRow]}>
-        {!isMyMessage && matchProfile && <Image source={{ uri: matchProfile.photos[0] }} style={styles.avatar} />}
+      <View style={[
+        styles.messageRow,
+        isMyMessage ? styles.myMessageRow : styles.theirMessageRow
+      ]}>
+        {!isMyMessage && matchProfile && (
+          <Image source={{ uri: matchProfile.photos[0] }} style={styles.avatar} />
+        )}
         <LinearGradient
-          colors={isMyMessage ? ['#fb7185', '#f472b6'] : ['#e2e8f0', '#f1f5f9']}
-          style={[styles.messageBubble, isMyMessage ? styles.myMessageBubble : styles.theirMessageBubble]}
+          colors={isMyMessage ? ['#fb7185', '#f472b6'] : ['#f1f5f9', '#e2e8f0']}
+          start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+          style={[
+            styles.messageBubble,
+            isMyMessage ? styles.myMessageBubble : styles.theirMessageBubble
+          ]}
         >
           <Text style={isMyMessage ? styles.myMessageText : styles.theirMessageText}>{item.text}</Text>
         </LinearGradient>
@@ -86,50 +90,82 @@ const ChatPage: React.FC = () => {
   }
 
   return (
-    <LinearGradient colors={['#FFF1F2', '#F0F9FF']} style={styles.container}>
-      <SafeAreaView style={styles.flex}>
-        <KeyboardAvoidingView
-          style={styles.flex}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
-        >
-          <FlatList
-            ref={flatListRef}
-            data={messages}
-            renderItem={renderMessage}
-            keyExtractor={(item) => item.id}
-            style={styles.messageList}
-            contentContainerStyle={styles.messageListContent}
-            onContentSizeChange={() => flatListRef.current?.scrollToEnd()}
-            onLayout={() => flatListRef.current?.scrollToEnd()}
-          />
+    <>
+      <LinearGradient colors={['#FFF1F2', '#F0F9FF']} style={styles.container}>
+        {/* Stylish Header */}
+        <SafeAreaView style={styles.headerSafe}>
+          <View style={styles.header}>
+            <View style={styles.headerProfile}>
+              <TouchableOpacity onPress={() => setShowProfileModal(true)}>
+                <Image source={{ uri: matchProfile.photos[0] }} style={styles.headerAvatar} />
+              </TouchableOpacity>
+              <View>
+                <Text style={styles.headerName}>{matchProfile.name}</Text>
+                <Text style={styles.headerSub}>{matchProfile.occupation}</Text>
+              </View>
+            </View>
+            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerClose}>
+              <XIcon width={28} height={28} color="#f472b6" />
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
 
-          <View style={styles.footer}>
-            {aiSuggestion && (
-              <TouchableOpacity onPress={useSuggestion} style={styles.suggestionBox}>
+        <SafeAreaView style={styles.flex}>
+          <KeyboardAvoidingView
+            style={styles.flex}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+          >
+            <FlatList
+              ref={flatListRef}
+              data={messages}
+              renderItem={renderMessage}
+              keyExtractor={(item) => item.id}
+              style={styles.messageList}
+              contentContainerStyle={styles.messageListContent}
+              onContentSizeChange={() => flatListRef.current?.scrollToEnd()}
+              onLayout={() => flatListRef.current?.scrollToEnd()}
+            />
+
+            <View style={styles.footer}>
+              {aiSuggestion && (
+                <TouchableOpacity onPress={useSuggestion} style={styles.suggestionBox}>
                   <Text style={styles.suggestionText}>{aiSuggestion}</Text>
                   <Text style={styles.suggestionTapText}>Tap to use</Text>
-              </TouchableOpacity>
-            )}
-            <View style={styles.inputRow}>
-              <TouchableOpacity onPress={handleGetAiSuggestion} disabled={isLoadingAi} style={styles.wandButton}>
+                </TouchableOpacity>
+              )}
+              <View style={styles.inputRow}>
+                <TouchableOpacity onPress={handleGetAiSuggestion} disabled={isLoadingAi} style={styles.wandButton}>
                   {isLoadingAi ? <ActivityIndicator color="#f472b6" /> : <WandIcon width={24} height={24} color="#9ca3af" />}
-              </TouchableOpacity>
-              <TextInput
-                style={styles.input}
-                value={newMessage}
-                onChangeText={setNewMessage}
-                placeholder="Type a message..."
-                placeholderTextColor="#9ca3af"
-              />
-              <TouchableOpacity onPress={handleSendMessage} disabled={!newMessage.trim()} style={styles.sendButton}>
-                  <Text style={styles.sendText}>Send</Text>
-              </TouchableOpacity>
+                </TouchableOpacity>
+                <TextInput
+                  style={styles.input}
+                  value={newMessage}
+                  onChangeText={setNewMessage}
+                  placeholder="Type a message..."
+                  placeholderTextColor="#9ca3af"
+                />
+                <TouchableOpacity onPress={handleSendMessage} disabled={!newMessage.trim()} style={styles.sendButton}>
+                  <LinearGradient
+                    colors={['#f472b6', '#fb7185']}
+                    style={styles.sendButtonGradient}
+                  >
+                    <Text style={styles.sendText}>Send</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              </View>
             </View>
-          </View>
-        </KeyboardAvoidingView>
-      </SafeAreaView>
-    </LinearGradient>
+          </KeyboardAvoidingView>
+        </SafeAreaView>
+      </LinearGradient>
+      {showProfileModal && (
+        <ProfileDetailModal
+          profile={matchProfile}
+          visible={showProfileModal}
+          onClose={() => setShowProfileModal(false)}
+        />
+      )}
+    </>
   );
 };
 
@@ -142,6 +178,53 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  headerSafe: {
+    backgroundColor: 'white',
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 18,
+    paddingTop: 18,
+    paddingBottom: 12,
+    backgroundColor: 'white',
+  },
+  headerProfile: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  headerAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    marginRight: 12,
+    borderWidth: 2,
+    borderColor: '#f472b6',
+  },
+  headerName: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#f472b6',
+  },
+  headerSub: {
+    fontSize: 13,
+    color: '#64748b',
+    fontWeight: '500',
+    marginTop: 2,
+  },
+  headerClose: {
+    padding: 6,
+    borderRadius: 20,
+    backgroundColor: '#fdf2f8',
+  },
   flex: {
     flex: 1,
   },
@@ -149,11 +232,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   messageListContent: {
-    padding: 10,
+    padding: 16,
+    paddingBottom: 30,
   },
   messageRow: {
     flexDirection: 'row',
-    marginBottom: 10,
+    marginBottom: 12,
     alignItems: 'flex-end',
   },
   myMessageRow: {
@@ -167,17 +251,26 @@ const styles = StyleSheet.create({
     height: 32,
     borderRadius: 16,
     marginRight: 8,
+    borderWidth: 1,
+    borderColor: '#f472b6',
   },
   messageBubble: {
     maxWidth: '75%',
-    padding: 12,
-    borderRadius: 18,
+    padding: 14,
+    borderRadius: 22,
+    shadowColor: '#f472b6',
+    shadowOpacity: 0.08,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 6,
+    elevation: 2,
   },
   myMessageBubble: {
-    borderBottomRightRadius: 4,
+    borderBottomRightRadius: 6,
+    marginLeft: '20%',
   },
   theirMessageBubble: {
-    borderBottomLeftRadius: 4,
+    borderBottomLeftRadius: 6,
+    marginRight: '20%',
   },
   myMessageText: {
     color: 'white',
@@ -221,19 +314,26 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    height: 40,
+    height: 44,
     backgroundColor: '#f1f5f9',
-    borderRadius: 20,
-    paddingHorizontal: 15,
+    borderRadius: 22,
+    paddingHorizontal: 16,
     marginHorizontal: 8,
     fontSize: 16,
   },
   sendButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    borderRadius: 22,
+    overflow: 'hidden',
+  },
+  sendButtonGradient: {
+    paddingHorizontal: 20,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 22,
   },
   sendText: {
-    color: '#f472b6',
+    color: 'white',
     fontWeight: 'bold',
     fontSize: 16,
   },

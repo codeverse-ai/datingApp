@@ -12,7 +12,7 @@ import { Picker } from '@react-native-picker/picker';
 
 const DEFAULT_FILTERS: FilterState = {
   ageRange: [18, 55],
-  maxDistance: 50,
+  distance: 5000,
   requiredInterests: [],
   mustHaveBio: false,
   searchLocation: null,
@@ -111,7 +111,7 @@ const FiltersPage: React.FC = () => {
             minimumValue={1}
             maximumValue={100}
             step={1}
-            value={localFilters.maxDistance}
+            value={localFilters.distance}
             onValueChange={value => setLocalFilters(prev => ({...prev, maxDistance: value}))}
             minimumTrackTintColor="#f472b6"
             maximumTrackTintColor="#d1d5db"

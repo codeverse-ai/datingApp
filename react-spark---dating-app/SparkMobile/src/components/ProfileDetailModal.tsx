@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { View, Text, Modal, StyleSheet, ScrollView, Image, TouchableOpacity, TextInput, KeyboardAvoidingView, Platform, SafeAreaView } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
@@ -12,6 +11,9 @@ interface ProfileDetailModalProps {
     profile: ProfileWithDistance;
     visible: boolean;
     onClose: () => void;
+    onLike?: (profile: ProfileWithDistance) => void;
+    onNope?: (profile: ProfileWithDistance) => void;
+    onSuperlike?: (profile: ProfileWithDistance) => void;
 }
 
 const ZodiacIcon: React.FC<{ sign: string, style?: object }> = ({ sign, style }) => {
@@ -19,7 +21,14 @@ const ZodiacIcon: React.FC<{ sign: string, style?: object }> = ({ sign, style })
   return <Text style={style}>{signSymbol}</Text>
 }
 
-export const ProfileDetailModal: React.FC<ProfileDetailModalProps> = ({ profile, visible, onClose }) => {
+export const ProfileDetailModal: React.FC<ProfileDetailModalProps> = ({
+    profile,
+    visible,
+    onClose,
+    onLike,
+    onNope,
+    onSuperlike,
+}) => {
     const navigation = useNavigation<any>();
     const [activePhotoIndex, setActivePhotoIndex] = useState(0);
     const [newMessage, setNewMessage] = useState('');
@@ -28,10 +37,10 @@ export const ProfileDetailModal: React.FC<ProfileDetailModalProps> = ({ profile,
 
     const nextPhoto = () => setActivePhotoIndex(i => (i + 1) % profile.photos.length);
     const prevPhoto = () => setActivePhotoIndex(i => (i - 1 + profile.photos.length) % profile.photos.length);
-    
+
     const handleSendMessage = async () => {
         if (!newMessage.trim() || !user || isSending) return;
-        
+
         setIsSending(true);
         await sendMessage(profile.id, newMessage.trim());
         setIsSending(false);
@@ -90,7 +99,36 @@ export const ProfileDetailModal: React.FC<ProfileDetailModalProps> = ({ profile,
                                     </View>
                                 )}
                             </View>
-
+                                  {/* ACTION BUTTONS */}
+                            <View style={styles.actionRow}>
+                                <TouchableOpacity
+                                    style={[styles.actionButton, styles.nopeButton]}
+                                    onPress={() => {
+                                        onNope && onNope(profile);
+                                        onClose();
+                                    }}
+                                >
+                                    <Text style={styles.actionIcon}>✖️</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={[styles.actionButton, styles.superlikeButton]}
+                                    onPress={() => {
+                                        onSuperlike && onSuperlike(profile);
+                                        onClose();
+                                    }}
+                                >
+                                    <Text style={styles.actionIcon}>⭐️</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={[styles.actionButton, styles.likeButton]}
+                                    onPress={() => {
+                                        onLike && onLike(profile);
+                                        onClose();
+                                    }}
+                                >
+                                    <Text style={styles.actionIcon}>❤️</Text>
+                                </TouchableOpacity>
+                            </View>
                             <View style={styles.separator} />
 
                             <View style={styles.section}>
@@ -134,6 +172,8 @@ export const ProfileDetailModal: React.FC<ProfileDetailModalProps> = ({ profile,
                                     ))}
                                 </View>
                             </View>
+
+                          
                         </View>
                     </ScrollView>
 
@@ -165,7 +205,7 @@ const styles = StyleSheet.create({
     scrollContent: { paddingBottom: 100 },
     imageContainer: {
         width: '100%',
-        height: 400,
+        height: 500,
         backgroundColor: '#d1d5db',
     },
     image: {
@@ -302,6 +342,38 @@ const styles = StyleSheet.create({
     interestText: {
         color: '#db2777',
         fontWeight: '500',
+    },
+    actionRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-evenly',
+        alignItems: 'center',
+        marginVertical: 24,
+    },
+    actionButton: {
+        width: 64,
+        height: 64,
+        borderRadius: 32,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: '#f8fafc',
+        shadowColor: '#000',
+        shadowOpacity: 0.15,
+        shadowOffset: { width: 0, height: 2 },
+        shadowRadius: 6,
+        elevation: 4,
+        marginHorizontal: 8,
+    },
+    actionIcon: {
+        fontSize: 32,
+    },
+    likeButton: {
+        backgroundColor: '#d1fae5',
+    },
+    nopeButton: {
+        backgroundColor: '#fee2e2',
+    },
+    superlikeButton: {
+        backgroundColor: '#e0e7ff',
     },
     footer: {
         position: 'absolute',

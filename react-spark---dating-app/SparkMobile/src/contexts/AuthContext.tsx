@@ -2,7 +2,7 @@
 import React, { createContext, useState, useEffect, useCallback, useMemo } from 'react';
 import type { User, AuthContextType, SocialLoginProvider, Profile } from '../types';
 import { MOCK_USERS, DAILY_AFFIRMATIONS, VIBES, ZODIAC_SIGNS } from '../constants';
-
+import * as api from '../utils/api';
 export const AuthContext = createContext<AuthContextType | null>(null);
 
 // This is a mock AuthProvider that simulates a backend using local state.

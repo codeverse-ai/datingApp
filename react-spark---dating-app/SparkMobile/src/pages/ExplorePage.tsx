@@ -1,5 +1,4 @@
-
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, ScrollView, FlatList, Image, TouchableOpacity } from 'react-native';
 import { EXPLORE_CATEGORIES, MOCK_PROFILES } from '../constants';
 import { useAuth } from '../hooks/useAuth';
@@ -10,7 +9,6 @@ import type { Profile, ProfileWithDistance } from '../types';
 import { ProfileDetailModal } from '../components/ProfileDetailModal';
 import { LinearGradient } from 'expo-linear-gradient';
 
-
 const ExplorePage: React.FC = () => {
     const { user } = useAuth();
     const { location: userLocation } = useLocation();
@@ -19,49 +17,49 @@ const ExplorePage: React.FC = () => {
     const [profiles] = useState<Profile[]>(MOCK_PROFILES);
     const [viewingProfile, setViewingProfile] = useState<ProfileWithDistance | null>(null);
     const [showGlobalProfiles, setShowGlobalProfiles] = useState(false);
-    const [showGlobalMessage, setShowGlobalMessage] = useState(false);
 
-    const filteredProfiles: ProfileWithDistance[] = useMemo(() => {
+    // Step 1: Filter by category and user filters (except distance)
+    const baseFiltered: ProfileWithDistance[] = useMemo(() => {
         if (!user) return [];
-
         const currentCategory = EXPLORE_CATEGORIES.find(c => c.name === activeCategory);
         const interestsToFilter = currentCategory?.interests || [];
-
         return profiles
+            .filter(p => p.id !== user.id)
             .filter(p => {
-                 if (p.id === user.id) return false;
-                 const inCategory = interestsToFilter.length === 0 || interestsToFilter.some(interest => p.interests.includes(interest));
-                 if (!inCategory) return false;
-                 
-                 const withinAge = p.age >= filters.ageRange[0] && p.age <= filters.ageRange[1];
-                 const hasBio = !filters.mustHaveBio || (p.bio && p.bio.trim().length > 0);
-                 const hasRequiredInterests = filters.requiredInterests.length === 0 || filters.requiredInterests.every(interest => p.interests.includes(interest));
-                 return withinAge && hasBio && hasRequiredInterests;
+                const inCategory = interestsToFilter.length === 0 || interestsToFilter.some(interest => p.interests.includes(interest));
+                if (!inCategory) return false;
+                const withinAge = p.age >= filters.ageRange[0] && p.age <= filters.ageRange[1];
+                const hasBio = !filters.mustHaveBio || (p.bio && p.bio.trim().length > 0);
+                const hasRequiredInterests = filters.requiredInterests.length === 0 || filters.requiredInterests.every(interest => p.interests.includes(interest));
+                return withinAge && hasBio && hasRequiredInterests;
             })
             .map(profile => ({
                 ...profile,
                 distance: userLocation ? calculateDistance(userLocation, profile.location) : 9999,
-            }))
-            .filter(p => showGlobalProfiles || p.distance <= filters.distance)
-            .sort(() => Math.random() - 0.5);
-    }, [user, userLocation, filters, profiles, activeCategory, showGlobalProfiles]);
+            }));
+    }, [user, userLocation, filters, profiles, activeCategory]);
 
-    useEffect(() => {
-        if (filteredProfiles.length === 0 && !showGlobalProfiles && !showGlobalMessage) {
-            setShowGlobalMessage(true);
-            const timer = setTimeout(() => {
-                setShowGlobalProfiles(true);
-                setShowGlobalMessage(false);
-            }, 2000);
-            return () => clearTimeout(timer);
-        }
-    }, [filteredProfiles.length, showGlobalProfiles, showGlobalMessage]);
+    // Step 2: Apply distance filter if not showing global
+    const filteredProfiles = useMemo(() => {
+        if (showGlobalProfiles) return baseFiltered.sort(() => Math.random() - 0.5);
+        return baseFiltered.filter(p => p.distance <= filters.distance).sort(() => Math.random() - 0.5);
+    }, [baseFiltered, showGlobalProfiles, filters.distance]);
+
+    // Modal action handlers
+    const handleLike = (profile: ProfileWithDistance) => setViewingProfile(null);
+    const handleNope = (profile: ProfileWithDistance) => setViewingProfile(null);
+    const handleSuperlike = (profile: ProfileWithDistance) => setViewingProfile(null);
+
+    // Reset global switch when changing category
+    React.useEffect(() => {
+        setShowGlobalProfiles(false);
+    }, [activeCategory]);
 
     return (
         <LinearGradient colors={['#FFF1F2', '#F0F9FF']} style={styles.container}>
             <SafeAreaView style={styles.flex}>
                 <View style={styles.header}>
-                    <Text style={styles.headerTitle}>Explore</Text>
+                    <Text style={styles.headerTitle}>Spark</Text>
                 </View>
                 <View>
                     <ScrollView
@@ -89,12 +87,7 @@ const ExplorePage: React.FC = () => {
                     </ScrollView>
                 </View>
                 
-                {showGlobalMessage ? (
-                    <View style={styles.emptyContainer}>
-                        <Text style={styles.emptyTitle}>No more profiles nearby.</Text>
-                        <Text style={styles.emptySubtitle}>Switching to global profiles...</Text>
-                    </View>
-                ) : filteredProfiles.length > 0 ? (
+                {filteredProfiles.length > 0 ? (
                     <FlatList
                         data={filteredProfiles}
                         numColumns={2}
@@ -115,8 +108,29 @@ const ExplorePage: React.FC = () => {
                     />
                 ) : (
                     <View style={styles.emptyContainer}>
-                        <Text style={styles.emptyTitle}>No one matches that vibe.</Text>
-                        <Text style={styles.emptySubtitle}>Try a different category or adjust your main filters!</Text>
+                        <Text style={styles.emptyTitle}>
+                            {showGlobalProfiles
+                                ? "No one matches that vibe."
+                                : "No nearby profiles found in this category."}
+                        </Text>
+                        <Text style={styles.emptySubtitle}>
+                            {showGlobalProfiles
+                                ? "Try a different category or adjust your main filters!"
+                                : "You can try searching globally."}
+                        </Text>
+                        {!showGlobalProfiles && (
+                            <TouchableOpacity
+                                onPress={() => setShowGlobalProfiles(true)}
+                                style={{
+                                    marginTop: 16,
+                                    padding: 12,
+                                    backgroundColor: '#F06292',
+                                    borderRadius: 20
+                                }}
+                            >
+                                <Text style={{ color: 'white', fontWeight: 'bold' }}>Show Global Profiles</Text>
+                            </TouchableOpacity>
+                        )}
                     </View>
                 )}
             </SafeAreaView>
@@ -126,6 +140,9 @@ const ExplorePage: React.FC = () => {
                     profile={viewingProfile}
                     visible={!!viewingProfile}
                     onClose={() => setViewingProfile(null)}
+                    onLike={handleLike}
+                    onNope={handleNope}
+                    onSuperlike={handleSuperlike}
                 />
             )}
         </LinearGradient>
